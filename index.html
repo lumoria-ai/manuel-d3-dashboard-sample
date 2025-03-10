@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>European Rent Dashboard</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; }
+        svg { margin: 20px; }
+        .chart-container { display: flex; justify-content: space-around; flex-wrap: wrap; }
+    </style>
+</head>
+<body>
+    <h1>European Rent Dashboard</h1>
+    <div class="chart-container">
+        <div id="bar-chart"></div>
+        <div id="line-chart"></div>
+        <div id="map-chart"></div>
+    </div>
+    <script>
+        const data = [
+            {"country": "UK", "year": 2020, "rent": 900, "lat": 55.3781, "lon": -3.4360},
+            {"country": "UK", "year": 2021, "rent": 950, "lat": 55.3781, "lon": -3.4360},
+            {"country": "Germany", "year": 2020, "rent": 850, "lat": 51.1657, "lon": 10.4515},
+            {"country": "Germany", "year": 2021, "rent": 870, "lat": 51.1657, "lon": 10.4515},
+            {"country": "France", "year": 2020, "rent": 800, "lat": 46.6034, "lon": 1.8883},
+            {"country": "France", "year": 2021, "rent": 820, "lat": 46.6034, "lon": 1.8883},
+            {"country": "Spain", "year": 2020, "rent": 750, "lat": 40.4637, "lon": -3.7492},
+            {"country": "Spain", "year": 2021, "rent": 770, "lat": 40.4637, "lon": -3.7492},
+            {"country": "Italy", "year": 2020, "rent": 780, "lat": 41.8719, "lon": 12.5674},
+            {"country": "Italy", "year": 2021, "rent": 790, "lat": 41.8719, "lon": 12.5674}
+        ];
+
+        // Bar Chart - Average Rent by Country
+        const barChartData = d3.rollups(
+            data,
+            v => d3.mean(v, d => d.rent),
+            d => d.country
+        );
+
+        const barSvg = d3.select("#bar-chart").append("svg").attr("width", 400).attr("height", 300);
+
+        const x = d3.scaleBand().domain(barChartData.map(d => d[0])).range([0, 400]).padding(0.1);
+        const y = d3.scaleLinear().domain([0, 1000]).range([300, 0]);
+
+        barSvg.selectAll("rect")
+            .data(barChartData)
+            .enter().append("rect")
+            .attr("x", d => x(d[0]))
+            .attr("y", d => y(d[1]))
+            .attr("width", x.bandwidth())
+            .attr("height", d => 300 - y(d[1]))
+            .attr("fill", "steelblue");
+
+        barSvg.append("g").attr("transform", "translate(0,300)").call(d3.axisBottom(x));
+        barSvg.append("g").call(d3.axisLeft(y));
+
+        // Line Chart - Rent Trends Over Time
+        const lineSvg = d3.select("#line-chart").append("svg").attr("width", 400).attr("height", 300);
+
+        const lineX = d3.scaleLinear().domain([2020, 2021]).range([0, 400]);
+        const lineY = d3.scaleLinear().domain([700, 1000]).range([300, 0]);
+
+        const line = d3.line()
+            .x(d => lineX(d.year))
+            .y(d => lineY(d.rent));
+
+        const countries = Array.from(new Set(data.map(d => d.country)));
+
+        countries.forEach(country => {
+            const countryData = data.filter(d => d.country === country);
+            lineSvg.append("path")
+                .datum(countryData)
+                .attr("d", line)
+                .attr("fill", "none")
+                .attr("stroke", "orange")
+                .attr("stroke-width", 2);
+        });
+
+        lineSvg.append("g").attr("transform", "translate(0,300)").call(d3.axisBottom(lineX).ticks(2));
+        lineSvg.append("g").call(d3.axisLeft(lineY));
+
+        // Map Chart - Rent Prices by Location
+        const mapSvg = d3.select("#map-chart").append("svg").attr("width", 400).attr("height", 300);
+
+        const projection = d3.geoMercator().scale(500).center([10, 50]).translate([200, 150]);
+
+        mapSvg.selectAll("circle")
+            .data(data.filter(d => d.year === 2021))
+            .enter().append("circle")
+            .attr("cx", d => projection([d.lon, d.lat])[0])
+            .attr("cy", d => projection([d.lon, d.lat])[1])
+            .attr("r", d => d.rent / 100)
+            .attr("fill", "red")
+            .attr("opacity", 0.7);
+    </script>
+</body>
+</html>
